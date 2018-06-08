@@ -7,7 +7,10 @@
   <title>Udacity Todos Goals</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" type="text/css" media="screen" href="main.css" />
-  <script src="main.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/redux/3.7.2/redux.min.js"></script>
+  <script src="https://unpkg.com/react@16.3.0-alpha.1/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@16.3.0-alpha.1/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
 </head>
 
 <body>
@@ -18,43 +21,20 @@
     <ul id='todos'></ul>
   </div>
   <div>
-      <h1>Goals</h1>
-      <input id='goal' type='text' placeholder='Add Todo' />
-      <button id='goalBtn'>Add Goal</button>
-      <ul id='goals'></ul>
-    </div>
+    <h1>Goals</h1>
+    <input id='goal' type='text' placeholder='Add Todo' />
+    <button id='goalBtn'>Add Goal</button>
+    <ul id='goals'></ul>
+  </div>
+
+  <hr />
+
+  <div id='app'></div>
 
   <script type='text/javascript'>
     function generateId() {
       return Math.random().toString(36).substring(2) + (new Date()).getTime().toString(36);
-    }
-    function createStore(reducer) {
-
-      let state
-      let listeners = []
-
-      const getState = () => state
-
-      const subscribe = (listener) => {
-        listeners.push(listener)
-        return () => {
-          listeners = listeners.filter((l) => l !== listener)
-        }
-      }
-
-      const dispatch = (action) => {
-        state = reducer(state, action)
-        listeners.forEach((listener) => listener())
-      }
-
-      return {
-        getState,
-        subscribe,
-        dispatch
-      }
-    }
-
-    const ADD_TODO = 'ADD_TODO'
+    } const ADD_TODO = 'ADD_TODO'
     const REMOVE_TODO = 'REMOVE_TODO'
     const TOGGLE_TODO = 'TOGGLE_TODO'
     const ADD_GOAL = 'ADD_GOAL'
@@ -120,14 +100,37 @@
       }
     }
 
-    function app(state = {}, action) {
-      return {
-        todos: todos(state.todos, action),
-        goals: goals(state.goals, action)
+    const checker = (store) => (next) => (action) => {
+      if (
+        action.type === ADD_TODO &&
+        action.todo.name.toLowerCase().includes('bitcoin')
+      ) {
+        return alert("Nope, that's a bad idea.")
       }
+
+      if (
+        action.type === ADD_GOAL &&
+        action.goal.name.toLowerCase().includes('bitcoin')
+      ) {
+        return alert("Nope. That's a bad idea.")
+      }
+
+      return next(action)
     }
 
-    const store = createStore(app)
+    const logger = (store) => (next) => (action) => {
+      console.group(action.type)
+      console.log('The action: ', action)
+      const result = next(action)
+      console.log('The new state: ', store.getState())
+      console.groupEnd()
+      return result
+    }
+
+    const store = Redux.createStore(Redux.combineReducers({
+      todos,
+      goals
+    }), Redux.applyMiddleware(checker, logger))
 
     store.subscribe(() => {
       const { goals, todos } = store.getState()
@@ -137,60 +140,43 @@
 
       goals.forEach(addGoalToDOM)
       todos.forEach(addTodoToDOM)
-
-      console.log('The new state is:', store.getState())
     })
 
-    // store.dispatch({
-    //   type: ADD_TODO,
-    //   todo: {
-    //     id: 0,
-    //     name: 'Learn Redux',
-    //     complete: false
-    //   }
-    // })
+    function addTodo() {
+      const input = document.getElementById('todo')
+      const name = input.value
+      input.value = ''
 
-    // store.dispatch(addTodoAction({
-    //   id: 0,
-    //   name: 'Learn Redux',
-    //   complete: false
-    // }))
+      store.dispatch(addTodoAction({
+        name,
+        complete: false,
+        id: generateId()
+      }))
+    }
 
-      function addTodo () {
-        const input = document.getElementById('todo')
-        const name = input.value
-        input.value = ''
+    function addGoal() {
+      const input = document.getElementById('goal')
+      const name = input.value
+      input.value = ''
 
-        store.dispatch(addTodoAction({
-          name,
-          complete: false,
-          id: generateId()
-        }))
-      }
-
-      function addGoal () {
-        const input = document.getElementById('goal')
-        const name = input.value
-        input.value = ''
-
-        store.dispatch(addGoalAction({
-          name,
-          id: generateId()
-        }))
-      }
+      store.dispatch(addGoalAction({
+        name,
+        id: generateId()
+      }))
+    }
 
     document.getElementById('todoBtn').addEventListener('click', addTodo)
 
     document.getElementById('goalBtn').addEventListener('click', addGoal)
 
-    function createRemoveButton (onClick) {
+    function createRemoveButton(onClick) {
       const removeBtn = document.createElement('button')
       removeBtn.innerHTML = 'X'
       removeBtn.addEventListener('click', onClick)
       return removeBtn
     }
 
-    function addTodoToDOM (todo) {
+    function addTodoToDOM(todo) {
       const node = document.createElement('li')
       const text = document.createTextNode(todo.name)
 
@@ -208,12 +194,12 @@
       document.getElementById('todos').appendChild(node)
     }
 
-    function addGoalToDOM (goal) {
+    function addGoalToDOM(goal) {
       const node = document.createElement('li')
       const text = document.createTextNode(goal.name)
       const removeBtn = createRemoveButton(() => {
         store.dispatch(removeGoalAction(goal.id))
-      })
+      });
 
       node.appendChild(text)
       node.appendChild(removeBtn)
@@ -222,6 +208,56 @@
     }
 
   </script>
+
+  <script type='text/babel'>
+    function List (props) {
+      return (
+        <ul>
+          <li>LIST</li>
+        </ul>
+      )
+    }
+
+    class Todos extends React.Component {
+      render() {
+        return (
+          <div>
+          TODOS
+            <List />
+          </div>
+        )
+      }
+    }
+
+    class Goals extends React.Component {
+      render() {
+        return (
+          <div>
+          GOALS
+            <List />
+          </div>
+        )
+      }
+    }
+
+    class App extends React.Component {
+      render() {
+        return (
+          <div>
+            <Todos />
+            <Goals />
+          </div>
+        )
+      }
+    }
+
+    ReactDOM.render(
+      <App />,
+      document.getElementById('app')
+    )
+  
+  </script>
+
 </body>
 
 </html>
